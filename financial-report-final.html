@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Report Generator v2 - TestProject</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 25px;
+            text-align: center;
+        }
+
+        .report-title {
+            font-size: 1.2em;
+            margin-bottom: 12px;
+            font-weight: 600;
+            opacity: 0.95;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 25px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .upload-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.05em;
+        }
+
+        .file-inputs {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .file-input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-input-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        input[type="file"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .buttons-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .button-pdf {
+            background: linear-gradient(135deg, #11998e 0%, #0d7661 100%);
+        }
+
+        .button-pdf:hover {
+            box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .metrics-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .metrics-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.05em;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #667eea;
+        }
+
+        .metric-card.green {
+            border-left-color: #11998e;
+        }
+
+        .metric-card.red {
+            border-left-color: #ee0979;
+        }
+
+        .metric-label {
+            font-size: 0.8em;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .table-section h3 {
+            color: #333;
+            margin-top: 30px;
+            margin-bottom: 12px;
+            font-size: 1em;
+            border-left: 4px solid #667eea;
+            padding-left: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 0.9em;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .month-cell {
+            font-weight: 500;
+            color: #333;
+            min-width: 100px;
+        }
+
+        .number {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            white-space: nowrap;
+            font-size: 0.85em;
+        }
+
+        .positive {
+            color: #0b6623;
+            background: #c8f0dc;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .negative {
+            color: #b30043;
+            background: #fcc5d8;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .neutral {
+            color: #666;
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 3px;
+        }
+
+        .total-row {
+            background: linear-gradient(135deg, #f0f0f0 0%, #e8e8e8 100%);
+            font-weight: bold;
+            border-top: 2px solid #667eea;
+        }
+
+        .total-row td {
+            padding: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .conclusions {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 25px 0;
+            border: 2px solid #11998e;
+        }
+
+        .conclusions h4 {
+            color: #11998e;
+            margin-bottom: 12px;
+            font-size: 0.95em;
+        }
+
+        .conclusion-item {
+            margin: 8px 0;
+            padding-left: 15px;
+            border-left: 3px solid #11998e;
+            line-height: 1.5;
+            font-size: 0.95em;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            margin: 15px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 15px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fcc5d8;
+            color: #b30043;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        .success {
+            background: #c8f0dc;
+            color: #0b6623;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        footer {
+            background: #f0f0f0;
+            padding: 15px;
+            text-align: center;
+            color: #999;
+            border-top: 1px solid #ddd;
+            font-size: 0.85em;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95em;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-family: inherit;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 8px 20px;
+            font-size: 0.9em;
+        }
+
+        .modal-buttons .cancel-btn {
+            background: #999;
+        }
+
+        .modal-buttons .cancel-btn:hover {
+            box-shadow: 0 5px 20px rgba(153, 153, 153, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .file-inputs {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-row {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .buttons-row {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            table {
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div id="reportTitleDisplay" class="report-title" style="display:none;"></div>
+        <h1>📊 Financial Report v2</h1>
+        <p class="subtitle">План vs Факт - Анализ финансовых данных</p>
+    </header>
+
+    <div class="content">
+        <div id="uploadSection" class="upload-section">
+            <h3>📁 Загрузить файлы (XLS/XLSX)</h3>
+            <div class="file-inputs">
+                <div class="file-input-group">
+                    <label for="plannedCostFile">📉 Плановые затраты</label>
+                    <input type="file" id="plannedCostFile" accept=".xls,.xlsx" />
+                </div>
+                <div class="file-input-group">
+                    <label for="actualCostFile">📉 Фактические затраты</label>
+                    <input type="file" id="actualCostFile" accept=".xls,.xlsx" />
+                </div>
+                <div class="file-input-group">
+                    <label for="plannedRevenueFile">📈 Плановые доходы</label>
+                    <input type="file" id="plannedRevenueFile" accept=".xls,.xlsx" />
+                </div>
+                <div class="file-input-group">
+                    <label for="actualRevenueFile">📈 Фактические доходы</label>
+                    <input type="file" id="actualRevenueFile" accept=".xls,.xlsx" />
+                </div>
+            </div>
+            <div class="buttons-row">
+                <button onclick="generateReport()">🚀 Создать отчет</button>
+                <button class="button-pdf" id="savePdfBtn" onclick="openPdfDialog()" style="display:none;">📥 Сохранить PDF</button>
+            </div>
+            <div id="status"></div>
+        </div>
+
+        <div id="results" style="display: none;">
+            <div class="metrics-row">
+                <div class="metrics-section">
+                    <h3>📋 План</h3>
+                    <div class="metrics-grid" id="plannedMetricsGrid"></div>
+                </div>
+                <div class="metrics-section">
+                    <h3>✓ Факт</h3>
+                    <div class="metrics-grid" id="actualMetricsGrid"></div>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <h3>📅 Плановые показатели</h3>
+                <div class="table-container">
+                    <table id="plannedTable">
+                        <thead>
+                        <tr>
+                            <th>Месяц</th>
+                            <th style="text-align: right;">Расходы (₽)</th>
+                            <th style="text-align: right;">Доходы (₽)</th>
+                            <th style="text-align: right;">Прибыль (₽)</th>
+                        </tr>
+                        </thead>
+                        <tbody id="plannedTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <h3>✓ Фактические показатели</h3>
+                <div class="table-container">
+                    <table id="actualTable">
+                        <thead>
+                        <tr>
+                            <th>Месяц</th>
+                            <th style="text-align: right;">Расходы (₽)</th>
+                            <th style="text-align: right;">Доходы (₽)</th>
+                            <th style="text-align: right;">Прибыль (₽)</th>
+                            <th style="text-align: right;" colspan="3">Отклонения</th>
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                            <th style="text-align: right; font-size: 0.85em;">Расходы</th>
+                            <th style="text-align: right; font-size: 0.85em;">Доходы</th>
+                            <th style="text-align: right; font-size: 0.85em;">Прибыль</th>
+                        </tr>
+                        </thead>
+                        <tbody id="actualTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="conclusions">
+                <h4>✅ Выводы</h4>
+                <div id="conclusionsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2025 Кленов Руслан Игоревич | <a href="mailto:ruslan.klenov@yandex.ru">ruslan.klenov@yandex.ru</a></p>
+    </footer>
+</div>
+
+<div id="pdfModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">📥 Сохранить в PDF</div>
+        <label class="modal-label">Заголовок отчета:</label>
+        <input type="text" id="modalTitleInput" class="modal-input" placeholder="Финансовый отчет 2025" />
+        <div class="modal-buttons">
+            <button class="cancel-btn" onclick="closePdfDialog()">Отмена</button>
+            <button class="button-pdf" onclick="savePdfWithTitle()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const monthsMap = {
+        0: 'Январь', 1: 'Февраль', 2: 'Март', 3: 'Апрель', 4: 'Май', 5: 'Июнь',
+        6: 'Июль', 7: 'Август', 8: 'Сентябрь', 9: 'Октябрь', 10: 'Ноябрь', 11: 'Декабрь'
+    };
+
+    let currentPlannedData = null, currentActualData = null, currentMetrics = null;
+
+    function parseXLS(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    resolve(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]));
+                } catch (error) { reject(error); }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    const parseNumber = val => isNaN(parseFloat(String(val).replace(/,/g, ''))) ? 0 : parseFloat(String(val).replace(/,/g, ''));
+
+    function parseDate(val) {
+        if (!val) return null;
+        try {
+            const d = typeof val === 'number' ? new Date((val - 25569) * 86400000) : new Date(String(val).trim());
+            return isNaN(d.getTime()) ? null : d;
+        } catch { return null; }
+    }
+
+    const formatMonth = d => d ? `${monthsMap[d.getMonth()]} ${d.getFullYear()}` : '';
+
+    function sortMonths(months) {
+        const order = {'Январь':1,'Февраль':2,'Март':3,'Апрель':4,'Май':5,'Июнь':6,'Июль':7,'Август':8,'Сентябрь':9,'Октябрь':10,'Ноябрь':11,'Декабрь':12};
+        return months.sort((a, b) => {
+            const [ya, ma] = [parseInt(a.split(' ')[1]), order[a.split(' ')[0]]];
+            const [yb, mb] = [parseInt(b.split(' ')[1]), order[b.split(' ')[0]]];
+            return ya !== yb ? ya - yb : ma - mb;
+        });
+    }
+
+    function groupByMonth(data, datCol, amtCol) {
+        const result = {};
+        data.forEach(row => {
+            const dv = row[datCol] || row['Start Date'] || row['To'] || row['End Date'];
+            const amt = parseNumber(row[amtCol] || row['Amount'] || '0');
+            if (amt !== 0 && dv) {
+                const d = parseDate(dv);
+                if (d) { const m = formatMonth(d); result[m] = (result[m] || 0) + amt; }
+            }
+        });
+        return result;
+    }
+
+    async function generateReport() {
+        const status = document.getElementById('status');
+        const files = {
+            plannedCost: document.getElementById('plannedCostFile').files[0],
+            actualCost: document.getElementById('actualCostFile').files[0],
+            plannedRevenue: document.getElementById('plannedRevenueFile').files[0],
+            actualRevenue: document.getElementById('actualRevenueFile').files[0]
+        };
+
+        if (!Object.values(files).every(f => f)) {
+            status.innerHTML = '<div class="error">❌ Загрузите все 4 файла</div>';
+            return;
+        }
+
+        status.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+        try {
+            const [pcd, acd, prd, ard] = await Promise.all([
+                parseXLS(files.plannedCost), parseXLS(files.actualCost),
+                parseXLS(files.plannedRevenue), parseXLS(files.actualRevenue)
+            ]);
+
+            const [pe, ae, pi, ai] = [groupByMonth(pcd, 'Start Date', 'Amount'), groupByMonth(acd, 'Start Date', 'Amount'),
+                groupByMonth(prd, 'Start Date', 'Amount'), groupByMonth(ard, 'Start Date', 'Amount')];
+
+            const allMonths = sortMonths([...new Set([...Object.keys(pe), ...Object.keys(ae), ...Object.keys(pi), ...Object.keys(ai)])]);
+
+            if (allMonths.length === 0) {
+                status.innerHTML = '<div class="error">❌ Нет данных</div>';
+                return;
+            }
+
+            const plannedData = [], actualData = [];
+            let pcp = 0, acp = 0;
+
+            allMonths.forEach(m => {
+                const pexp = pe[m] || 0, pinc = pi[m] || 0, pp = pinc - pexp;
+                pcp += pp;
+                plannedData.push({month: m, expenses: pexp, income: pinc, cumulativeProfit: pcp});
+
+                const aexp = ae[m] || 0, ainc = ai[m] || 0, ap = ainc - aexp;
+                acp += ap;
+                const pm = plannedData.find(x => x.month === m);
+                actualData.push({
+                    month: m, expenses: aexp, income: ainc, cumulativeProfit: acp,
+                    expenseVariance: aexp - (pm ? pm.expenses : 0),
+                    incomeVariance: ainc - (pm ? pm.income : 0),
+                    profitVariance: acp - (pm ? pm.cumulativeProfit : 0)
+                });
+            });
+
+            const pte = Object.values(pe).reduce((a,b)=>a+b,0), pti = Object.values(pi).reduce((a,b)=>a+b,0),
+                  ate = Object.values(ae).reduce((a,b)=>a+b,0), ati = Object.values(ai).reduce((a,b)=>a+b,0);
+
+            currentPlannedData = plannedData;
+            currentActualData = actualData;
+            currentMetrics = {
+                plannedTotalExp: pte, plannedTotalInc: pti, plannedTotalProf: pcp,
+                actualTotalExp: ate, actualTotalInc: ati, actualTotalProf: acp,
+                expenseDeviation: ate - pte, incomeDeviation: ati - pti, profitDeviation: acp - pcp
+            };
+
+            displayResults();
+            document.getElementById('savePdfBtn').style.display = 'inline-block';
+            status.innerHTML = '<div class="success">✅ Отчет готов!</div>';
+        } catch (error) {
+            status.innerHTML = `<div class="error">❌ ${error.message}</div>`;
+        }
+    }
+
+    function displayResults() {
+        const m = currentMetrics, pc = 'planned', ac = 'actual';
+
+        document.getElementById('plannedMetricsGrid').innerHTML = `
+            <div class="metric-card green"><div class="metric-label">📈 Доход</div><div class="metric-value">${(m.plannedTotalInc/1000000).toFixed(1)}M</div></div>
+            <div class="metric-card red"><div class="metric-label">📉 Расходы</div><div class="metric-value">${(m.plannedTotalExp/1000000).toFixed(1)}M</div></div>
+            <div class="metric-card ${m.plannedTotalProf>=0?'green':'red'}"><div class="metric-label">💰 Прибыль</div><div class="metric-value">${(m.plannedTotalProf/1000000).toFixed(1)}M</div></div>
+            <div class="metric-card"><div class="metric-label">📊 Маржа</div><div class="metric-value">${m.plannedTotalInc>0?(m.plannedTotalProf/m.plannedTotalInc*100).toFixed(1):0}%</div></div>
+        `;
+
+        document.getElementById('actualMetricsGrid').innerHTML = `
+            <div class="metric-card green"><div class="metric-label">📈 Доход</div><div class="metric-value">${(m.actualTotalInc/1000000).toFixed(1)}M</div></div>
+            <div class="metric-card red"><div class="metric-label">📉 Расходы</div><div class="metric-value">${(m.actualTotalExp/1000000).toFixed(1)}M</div></div>
+            <div class="metric-card ${m.actualTotalProf>=0?'green':'red'}"><div class="metric-label">💰 Прибыль</div><div class="metric-value">${(m.actualTotalProf/1000000).toFixed(1)}M</div></div>
+            <div class="metric-card"><div class="metric-label">📊 Маржа</div><div class="metric-value">${m.actualTotalInc>0?(m.actualTotalProf/m.actualTotalInc*100).toFixed(1):0}%</div></div>
+        `;
+
+        let ph = '';
+        currentPlannedData.forEach(r => {
+            const cls = r.cumulativeProfit >= 0 ? 'positive' : 'negative';
+            ph += `<tr><td class="month-cell">${r.month}</td><td class="number">${r.expenses.toLocaleString('ru')}</td><td class="number">${r.income.toLocaleString('ru')}</td><td class="number"><span class="${cls}">${r.cumulativeProfit.toLocaleString('ru')}</span></td></tr>`;
+        });
+        ph += `<tr class="total-row"><td>ИТОГО</td><td class="number">${m.plannedTotalExp.toLocaleString('ru')}</td><td class="number">${m.plannedTotalInc.toLocaleString('ru')}</td><td class="number" style="color:white;background:${m.plannedTotalProf>=0?'#11998e':'#ee0979'};">${m.plannedTotalProf.toLocaleString('ru')}</td></tr>`;
+        document.getElementById('plannedTableBody').innerHTML = ph;
+
+        let ah = '';
+        currentActualData.forEach(r => {
+            const cls = r.cumulativeProfit >= 0 ? 'positive' : 'negative';
+            const ecls = r.expenseVariance > 0 ? 'negative' : (r.expenseVariance < 0 ? 'positive' : 'neutral');
+            const icls = r.incomeVariance > 0 ? 'positive' : (r.incomeVariance < 0 ? 'negative' : 'neutral');
+            const pcls = r.profitVariance > 0 ? 'positive' : (r.profitVariance < 0 ? 'negative' : 'neutral');
+            ah += `<tr><td class="month-cell">${r.month}</td><td class="number">${r.expenses.toLocaleString('ru')}</td><td class="number">${r.income.toLocaleString('ru')}</td><td class="number"><span class="${cls}">${r.cumulativeProfit.toLocaleString('ru')}</span></td><td class="number"><span class="${ecls}">${r.expenseVariance>0?'+':''}${r.expenseVariance.toLocaleString('ru')}</span></td><td class="number"><span class="${icls}">${r.incomeVariance>0?'+':''}${r.incomeVariance.toLocaleString('ru')}</span></td><td class="number"><span class="${pcls}">${r.profitVariance>0?'+':''}${r.profitVariance.toLocaleString('ru')}</span></td></tr>`;
+        });
+        ah += `<tr class="total-row"><td>ИТОГО</td><td class="number">${m.actualTotalExp.toLocaleString('ru')}</td><td class="number">${m.actualTotalInc.toLocaleString('ru')}</td><td class="number" style="color:white;background:${m.actualTotalProf>=0?'#11998e':'#ee0979'};">${m.actualTotalProf.toLocaleString('ru')}</td><td class="number" style="color:white;background:${m.expenseDeviation>0?'#ee0979':'#11998e'};"><strong>${m.expenseDeviation>0?'+':''}${m.expenseDeviation.toLocaleString('ru')}</strong></td><td class="number" style="color:white;background:${m.incomeDeviation>0?'#11998e':'#ee0979'};"><strong>${m.incomeDeviation>0?'+':''}${m.incomeDeviation.toLocaleString('ru')}</strong></td><td class="number" style="color:white;background:${m.profitDeviation>0?'#11998e':'#ee0979'};"><strong>${m.profitDeviation>0?'+':''}${m.profitDeviation.toLocaleString('ru')}</strong></td></tr>`;
+        document.getElementById('actualTableBody').innerHTML = ah;
+
+        const pcol = m.actualTotalProf >= 0 ? '#11998e' : '#ee0979';
+        document.getElementById('conclusionsContainer').innerHTML = `
+            <div class="conclusion-item"><strong>Статус:</strong> ${m.actualTotalProf >= 0 ? '✅ ПРИБЫЛЬНЫЙ' : '❌ УБЫТОЧНЫЙ'}</div>
+            <div class="conclusion-item" style="background: ${pcol}15; padding: 10px; border-left: 4px solid ${pcol}; border-radius: 4px;">
+                <strong>${m.actualTotalProf >= 0 ? '📈' : '📉'} Прибыль:</strong> <span style="color: ${pcol}; font-weight: bold;">${(m.actualTotalProf/1000000).toFixed(1)}M ₽</span>
+            </div>
+        `;
+
+        document.getElementById('results').style.display = 'block';
+    }
+
+    function openPdfDialog() {
+        document.getElementById('pdfModal').style.display = 'block';
+        document.getElementById('modalTitleInput').value = '';
+        document.getElementById('modalTitleInput').focus();
+    }
+
+    function closePdfDialog() {
+        document.getElementById('pdfModal').style.display = 'none';
+    }
+
+    function savePdfWithTitle() {
+        const title = document.getElementById('modalTitleInput').value.trim();
+        if (!title) {
+            alert('Введите заголовок отчета');
+            return;
+        }
+
+        closePdfDialog();
+        const titleDisplay = document.getElementById('reportTitleDisplay');
+        titleDisplay.textContent = title;
+        titleDisplay.style.display = 'block';
+
+        const uploadSection = document.getElementById('uploadSection');
+        const footer = document.querySelector('footer');
+        uploadSection.style.display = 'none';
+        footer.style.display = 'none';
+
+        setTimeout(() => {
+            const opt = {
+                margin: 10,
+                filename: 'Financial_Report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: [305, 457], orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(document.querySelector('.container')).save().then(() => {
+                uploadSection.style.display = 'block';
+                footer.style.display = 'block';
+                titleDisplay.style.display = 'none';
+            });
+        }, 200);
+    }
+
+    window.onclick = e => { if (e.target === document.getElementById('pdfModal')) closePdfDialog(); };
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && document.getElementById('pdfModal').style.display === 'block') {
+            e.preventDefault();
+            savePdfWithTitle();
+        }
+    });
+</script>
+</body>
+</html>
